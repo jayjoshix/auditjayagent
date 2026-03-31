@@ -81,7 +81,7 @@ Then, in a **single Bash command**, build all bundles using `cat`:
 } > {bundle_dir}/source.md
 
 # 2. Agent bundles = source.md + agent-specific instructions + shared-rules
-# Agent 1: Methodology (always runs — HackenProof methodology + blind-spots mental models)
+# Agent 1: Methodology (always runs — [HackenProof methodology](https://hackenproof.com/blog/for-hackers/smart-contract-audit-methodology-guide) + blind-spots mental models)
 cat {bundle_dir}/source.md \
     {resolved_path}/hacking-agents/methodology-agent.md \
     {resolved_path}/shared-rules.md \

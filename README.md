@@ -58,7 +58,7 @@ The agent greps for protocol-specific keywords and selects the best 2 matching s
 | Oracle | oracle-agent (staleness, TWAP, decimals, read-only reentrancy) |
 
 All audits also run:
-- **Methodology agent** (always) — HackenProof 10-phase + blind-spots mental models
+- **Methodology agent** (always) — [HackenProof 10-phase](https://hackenproof.com/blog/for-hackers/smart-contract-audit-methodology-guide) + blind-spots mental models
 - **Generic agent** (always) — Universal checklist (reentrancy, access control, math, signatures)
 - **Validator agent** (after others) — 14 false positive patterns + Gate A–F re-verification
 
