@@ -116,6 +116,54 @@ Stop thinking as a user. Think as an attacker:
 - **Centralization Risks:** What damage can the admin/owner do unilaterally?
 - **Doc/Code Mismatch:** If comments say "must do X" but code doesn't enforce it → finding.
 
+## Phase 9: Advanced Blind-Spots
+
+### The View / Mutate Boundary
+View functions are treated as safe, read-only, and trustworthy. But view functions that incorporate dynamic state (oracle prices, execution context flags, accrued interest) produce different outputs depending on WHEN and BY WHOM they are called.
+
+When a mutating function (like `liquidate` or `transfer`) internally calls a view function to determine how much to move, and that view function's output is context-dependent, the mutation will produce different results than expected.
+
+**Look for:**
+- `balanceOf()` or `getQuote()` outputs that change based on `msg.sender`, block state, or protocol flags
+- `previewRedeem` / `previewWithdraw` that don't perfectly match actual execution
+- View functions called inside modifiers or hooks that re-enter with different context
+
+### External Protocol API Edges
+Every external call is a trust boundary. The most common blind spot is assuming the external protocol handles edge cases gracefully.
+
+**Look for:**
+- **Zero-parameter rejections:** Does calling `decreaseLiquidity(0)`, `withdraw(0)`, or `redeem(0)` revert in the external protocol? If your wrapper can calculate 0 as a valid intermediate value, the entire operation becomes a DoS vector.
+- **Return value semantics:** Does the external protocol return the *requested* amount or the *actual* amount? If you request 100 but receive 98 (fees, rounding, partial fills), does your accounting break?
+- **Callback reentrancy:** Does the external protocol invoke callbacks (`onERC721Received`, `unlockCallback`, `fallback`) that re-enter your protocol mid-state-change?
+- **Implicit ordering requirements:** Does the external protocol require `approve` before `transferFrom`? `initialize` before `deposit`? Can an attacker frontrun the initialization?
+
+### Fee/Value Extraction Blind Spots
+**Look for:**
+- **Fee-on-transfer tokens:** The contract records `amount` but receives `amount - fee`. Internal accounting permanently inflated.
+- **Unclaimed value as collateral:** Positions with accrued but uncollected fees (Uniswap V3 `tokensOwed`) may be valued as collateral but impossible to extract through the wrapper's unwrap mechanism.
+- **Double-counting:** Fees accrued globally vs. per-position. If a position's fee snapshot is stale, newly assigned shares inherit historical fees they never earned.
+- **Value trapped in dust:** After partial withdrawals or liquidations, tiny amounts remain locked because they're below minimum thresholds or round to 0.
+
+### The Rounding Direction Spectrum
+Every division in Solidity rounds down. It becomes exploitable when:
+- An attacker can **repeat** the operation thousands of times, accumulating rounding dust
+- Rounding **favors the user** instead of the protocol
+- Two functions use **opposite rounding** for the same conversion (both favor user)
+
+**Check:** Mint/burn, deposit/withdraw, wrap/unwrap pairs — do both rounding directions favor the protocol?
+
+## Phase 10: Pre-Audit Protocol (5 Steps Before Reading Code)
+
+Before reading a single line of code on any new audit:
+
+1. **Draw the trust graph.** Which contracts call which? Which trust which? Where are the admin keys?
+2. **Identify the money.** Where does value enter? Where does it exit? What are intermediate representations? (Shares, wrapped tokens, USD values, LP positions)
+3. **Map the oracle pipeline.** Price data flow: source → adapter → consumer. Fallback paths? What happens when oracle returns 0, reverts, or stale data?
+4. **List the standards.** Which ERC standards does the protocol claim to implement? Which does it actually implement? Which does it *almost* implement but subtly deviate from?
+5. **Enumerate edge states.** What happens at: first deposit, last withdrawal, zero liquidity, zero price, max uint256, empty bytes, contract with no code, self-transfers, same-block operations?
+
+If you do these five things before reading code, the bugs will find you instead of you finding them.
+
 ## Output Requirements
 
 Apply the Gates A–F from shared-rules.md to ALL findings before reporting.

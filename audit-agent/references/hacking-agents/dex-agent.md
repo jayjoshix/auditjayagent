@@ -101,8 +101,57 @@ grep -n "transfer(\|safeTransfer\|transferFrom(" — return value handling
 
 ---
 
+## Part 4: Uniswap V3 Tick Math — Focused Attack Vectors
+
+### `unchecked` Missing on Fee Growth Math (Solidity ^0.8.0 Integration)
+Uniswap V3's `feeGrowthInside` and `secondsPerLiquidityInsideX128` rely on intentional modular underflow. Written in Solidity `<0.8`, this works natively. Integrators on `^0.8.0` forget to wrap subtraction in `unchecked {}`, causing valid fee claims to revert permanently.
+- Search for `feeGrowthInside`, `feeGrowthOutside`, `secondsPerLiquidityInsideX128` subtraction. Are these wrapped in `unchecked { }`?
+- **Historical match:** `ConcentratedLiquidityPool: rangeFeeGrowth math needs to be unchecked`
+
+### Uninitialized Ticks Return Stale `feeGrowthOutside = 0`
+Uniswap only updates `feeGrowthOutside` for initialized ticks. If a protocol calculates `feeGrowthInside` for a range where one boundary tick is uninitialized, `feeGrowthOutside = 0` is returned, breaking fee calculation and permanently locking fees.
+- Does the protocol query `pool.ticks(tickLower/tickUpper)` and assume both ticks are initialized?
+- **Historical match:** `Incorrect inside fees for uninitialized ticks causes position funds to be stuck`
+
+### Tick Spacing Misalignment (`slot0.tick` Not Rounded to `tickSpacing`)
+Liquidity can only be added at ticks that are exact multiples of `tickSpacing`. If a strategy derives `tickLower`/`tickUpper` from `slot0.tick` directly without rounding, `mint` will revert causing DoS.
+- Check: `tick = (slot0.tick / tickSpacing) * tickSpacing`. Is this flooring applied for negative ticks too?
+- **Historical match:** `Strategy ticks set from slot0 without spacing alignment → DoS`
+
+### Negative Tick TWAP Rounding Error
+Solidity integer division rounds toward zero (`-3 / 2 = -1`). For TWAP, negative tickCumulativeDelta must round DOWN (`-2`). The fix: `if (delta < 0 && delta % time != 0) tick--`. Integrators skip this.
+- Look for TWAP logic using `int56 tickCumulatives`. Does it subtract 1 for negative non-exact divisors?
+- **Historical match:** `Wrong rounding of TWAP when tickCumulativeDelta is negative`
+
+### Empty Tick Inflation Attack
+An attacker pushes spot price into an empty tick region (no liquidity resisting slippage), triggering artificial liquidations, stop-loss executions, or oracle readings.
+- Are limit order executions or stop-losses triggered by spot tick? Can attacker manipulate spot tick cheaply through empty regions?
+- **Historical match:** `Inflation attack on empty ticks`
+
+### Zero / Same Tick Boundaries (`tickLower == tickUpper`)
+Uniswap V3 core reverts on `tickLower >= tickUpper`, but AMM forks or protocol wrappers may update accounting state BEFORE the V3 call reverts.
+- Is `require(tickLower < tickUpper)` validated in the wrapper BEFORE any state changes?
+- **Historical match:** `Missing lower<upper check in mint_position`
+
+### Width-Extreme Tick Ranges → Array OOB / Division-by-Zero in Solvency
+Solvency or margin calculations that use `(tickUpper - tickLower)` as a denominator can hit division-by-zero or overflow if a position spans MIN_TICK to MAX_TICK.
+- Are there validations that prevent positions spanning the full tick range?
+- **Historical match:** `Division-by-zero in long-leg collateral requirement blocks solvency checks`
+
+### Dynamic Tick Spacing Upgrades Orphan Existing Positions
+Some AMM forks allow admin to change `tickSpacing`. If integrating protocol encodes positions using current tickSpacing, an admin update misaligns all active ticks, permanently abandoning existing liquidity.
+- Does the underlying AMM allow dynamic tick spacing changes? Are stored positions tied to the creation-time spacing?
+- **Historical match:** `Missed fills when tick-spacing changes`
+
+### Liveness DoS via Spot/TWAP Divergence Manipulation
+`require(abs(SpotTick - TwapTick) <= MaxDivergence)` designed as oracle manipulation protection. Attacker swaps a tiny amount to push SpotTick just outside threshold → DoS liquidations for exactly one block, avoiding being liquidated.
+- Is the divergence check applied to time-sensitive operations (liquidations, force exercises)? Can an attacker buy one block of immunity cheaply?
+- **Historical match:** `Spot price manipulation blocks liquidations and premium settlements`
+
+---
+
 ## Output Requirements
 
 Apply shared-rules.md Gates A–F to ALL findings before reporting.
 Use CONFIRMED / PROBABLE / HYPOTHESIS format.
-Prioritize: oracle manipulation, reentrancy, slippage, first-depositor inflation.
+Prioritize: oracle manipulation, reentrancy, slippage, first-depositor inflation, tick math underflows, TWAP rounding.

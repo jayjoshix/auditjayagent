@@ -112,8 +112,40 @@ grep -n "realizedPremium\|commission\|fee" — fee bypass paths
 
 ---
 
+## Part 7: Options Vault — Specific Attack Vectors
+
+### Balancer Oracle Read-Only Reentrancy
+`BalancerPairOracle.getPrice()` reads `virtual_price` or pool token state. During a Balancer flash loan callback, the pool is mid-update. A re-entrant read of the oracle returns a manipulated value. If the options vault uses this to price collateral or P&L, LP funds can be drained.
+- Does the oracle read Balancer/Curve pool state via a view that can be re-entered during a flash loan?
+- Is a reentrancy lock enforced before reading external pool prices?
+- **Historical match:** `H-13: BalancerPairOracle can be manipulated using read-only reentrancy`
+
+### LP Gaming Option Expiry
+LPs can front-run option expiry with knowledge of the current price. If LPs can remove liquidity right before an in-the-money option expires (using the soon-to-be-settled price), they collect premiums without bearing the loss exposure.
+- Is there a lock period preventing LP withdrawals within N blocks of option expiry?
+- Can LPs exit the day before expiry with full knowledge of outcome?
+- **Historical match:** `H-2: BufferBinaryPool design allows LPs to game option expiry`
+
+### `_writeCheckpoint` Not Written to Storage on Same Block
+Vote delegation checkpoints that update twice within the same block: the first write is to a NEW slot (new checkpoint), but second writes within the same block should UPDATE the existing slot. A bug causes both to write new slots, resulting in delegated voting power being double-counted or lost.
+- In `_writeCheckpoint` / `writeCheckpoint`: if `lastCheckpointBlock == block.number`, does it UPDATE the existing entry or ADD a new one?
+- **Historical match:** `[H-07] _writeCheckpoint does not write to storage on same block`
+
+### EIP712 MetaTransaction Wrong Initializer Modifier
+An `EIP712MetaTransaction` base contract intended to be inherited uses `initializer` modifier on its setup function, conflicting with child contract's `initializer`. The child's initializer reverts because it perceives the parent module as already initialized.
+- Are parent/child initializer modifiers compatible (use `onlyInitializing` in base, `initializer` in child)?
+- **Historical match:** `[H-03] Wrong implementation of EIP712MetaTransaction initializer`
+
+### UniswapV3 `sqrtRatioLimit` Does Not Cause Revert on Partial Fills
+Using `sqrtPriceLimitX96` as slippage protection in Uniswap V3 does NOT cause a revert when the limit is hit — it causes a partial fill. The caller receives less than requested and must check actual output.
+- Does any swap integration use `sqrtPriceLimitX96` and assume it enforces minimum output? 
+- Is there a separate check on actual output vs. expected minimum?
+- **Historical match:** `H-9: UniswapV3 sqrtRatioLimit doesn't protect slippage — results in partial fill`
+
+---
+
 ## Output Requirements
 
 Apply shared-rules.md Gates A–F to ALL findings before reporting.
 Use CONFIRMED / PROBABLE / HYPOTHESIS format.
-Prioritize: commission bypasses, loop overwrite bugs, solvency math underflows, epoch manipulation, tick domain DoS.
+Prioritize: commission bypasses, loop overwrite bugs, solvency math underflows, epoch manipulation, tick domain DoS, LP gaming, oracle reentrancy.

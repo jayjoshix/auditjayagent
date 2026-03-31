@@ -103,8 +103,42 @@ grep -n "_writeCheckpoint\|delegate\|checkpoint" — governance timing
 
 ---
 
+## Part 6: NFT Lending — Deep-Dive Patterns
+
+### Division Before Multiplication in Withdrawal Queue
+`_getAvailable()` style functions that compute available-to-withdraw amounts may perform division before multiplication, causing 50%+ value loss for withdrawers when intermediate values are large.
+- Search for any division in withdrawal queue math that is then multiplied by another value. Reorder as `(a * b) / c`.
+- **Historical match:** `[H-02] Division before multiplication causes users to lose up to 50% in WithdrawalQueue`
+
+### NFT Hijack via `setFallbackHandler()` Validation Gap
+Gnosis Safe NFT wrappers allow specifying a fallback handler. If `setFallbackHandler()` doesn't validate that the provided address is a legitimate handler, an attacker who borrows the NFT via the safe can set a malicious fallback handler and hijack any ERC-721 or ERC-1155 token sent to the safe.
+- Does `setFallbackHandler` validate the address against an allowlist or whitelist?
+- **Historical match:** `[H-02] Attacker can hijack any borrowed ERC721/1155 via unvalidated setFallbackHandler`
+
+### LienToken Payee Not Reset on Transfer
+When a lien NFT is transferred to a new owner, if the `payee` field is NOT reset, the original owner retains payment rights forever even after transferring ownership. The new owner holds the NFT but receives no economic benefit.
+- On `transferFrom()` of the lien NFT, is `payee` updated or reset?
+- **Historical match:** `LienToken payee not reset on transfer — original owner detached from ownerOf but keeps payments`
+
+### Malicious Clone with Extradata Considered Valid
+If clone validity is checked based on bytecode prefix but extradata (appended after the clone program) is not validated, an attacker can deploy a malicious contract with matching prefix but arbitrary extradata that passes the validity check while behaving differently.
+- Does the clone validation check only the bytecode prefix or the FULL bytecode including extradata?
+- **Historical match:** `Clones with malicious extradata are also considered valid clones`
+
+### `makePayment` Not Updating Debt Stack
+A `makePayment` loop payment function that processes debt tranches may fail to correctly update the debt stack position after each payment iteration, causing most payments to not actually reduce debt.
+- In `makePayment` or equivalent: after each payment, is the stack pointer/index correctly advanced?
+- **Historical match:** `makePayment doesn't properly update stack — most payments don't pay off debt`
+
+### WithdrawProxy Allows Early Redemptions
+If `totalAssets()` in a withdraw proxy becomes > 0 before the vault calls `transferWithdrawReserve()`, users can redeem early at an incorrect exchange rate, draining reserves from other queued withdrawals.
+- Can `totalAssets()` become > 0 (via direct WETH transfer) before the vault authorizes the redemption window?
+- **Historical match:** `WithdrawProxy allows redemptions before PublicVault.transferWithdrawReserve`
+
+---
+
 ## Output Requirements
 
 Apply shared-rules.md Gates A–F to ALL findings before reporting.
 Use CONFIRMED / PROBABLE / HYPOTHESIS format.
-Prioritize: reentrancy via NFT callbacks, signature replay, order matching errors, auction mechanics.
+Prioritize: reentrancy via NFT callbacks, signature replay, order matching errors, auction mechanics, division-before-mult, payee state reset.

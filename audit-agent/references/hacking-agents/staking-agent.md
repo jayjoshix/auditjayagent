@@ -101,8 +101,40 @@ grep -n "minAmountOut\|slippage\|deadline" — unstaking swap protection
 
 ---
 
+## Part 7: Liquid Staking — Advanced Patterns
+
+### Liquidation Front-Run via NFT Transfer
+If a staking position is represented as an NFT (ShortRecord, Position NFT), the owner can mint an NFT for their position and transfer it to a different address just before a liquidation call is processed. The new owner is not the flagged account, breaking the liquidation flow.
+- If the protocol allows NFT-wrapping of positions, does liquidation use the NFT owner or the original creator as the target?
+- Can a flagged position escape liquidation by transferring the NFT?
+- **Historical match:** `Owner of bad ShortRecord can front-run flagShort/liquidateSecondary by front-running with NFT transfer`
+
+### Precision Differences in Collateral Ratio Math
+If collateral ratio uses different decimal precision for numerator vs. denominator (e.g., one value in e18 and another in e6), the resulting ratio is wildly incorrect for some token pairs, causing false liquidations or insolvency masking.
+- Does `userCollateralRatioMantissa` or equivalent use consistent decimal scaling for ALL token pairs?
+- Test: what happens when both tokens have non-18 decimals?
+- **Historical match:** `H-1: Precision differences in userCollateralRatioMantissa causes major issues for some token pairs`
+
+### Leveraged Farming: CVX/AURA Cliff Reward Math Error
+Reward distribution that involves "cliffs" (epochs where rate changes) must use precise modular arithmetic. A bug where cliff boundary is computed incorrectly causes users to lose rewards at each cliff boundary.
+- Are cliff boundaries computed with exact integer arithmetic? Is there off-by-one on the cliff threshold check?
+- **Historical match:** `H-4: CVX/AURA cliff calculation causes reward loss at end of each cliff`
+
+### BPT / LP Token Valuation Overestimate
+Stable BPT (Balancer Pool Token) valuation using `virtual_price` is vulnerable to read-only reentrancy during Balancer callbacks. An attacker uses a flash loan + Balancer join/exit to temporarily inflate `virtual_price`, overstating collateral.
+- Is BPT or Curve LP token price fetched via view function that reads `virtual_price`?
+- Is a reentrancy lock enforced BEFORE reading the external price?
+- **Historical match:** `H-1: Stable BPT valuation incorrect/exploitable via read-only reentrancy`
+
+### Interest Lock in Lending-Backed Strategies
+Lending-backed strategies (e.g., AAVE-backed vaults) may accumulate interest that is never extractable via the withdrawal path. The `withdrawLend()` equivalent may not route interest tokens correctly, permanently locking accrued interest.
+- After withdrawing from an underlying lending pool, is ALL accrued interest (not just principal) extractable via the normal withdraw path?
+- **Historical match:** `H-8: Interest component not withdrawable via withdrawLend — permanently locked`
+
+---
+
 ## Output Requirements
 
 Apply shared-rules.md Gates A–F to ALL findings before reporting.
 Use CONFIRMED / PROBABLE / HYPOTHESIS format.
-Prioritize: reward checkpoint failures, reward token injection, share inflation, exchange rate manipulation.
+Prioritize: reward checkpoint failures, reward token injection, share inflation, exchange rate manipulation, liquidation front-run, precision in collateral ratio.

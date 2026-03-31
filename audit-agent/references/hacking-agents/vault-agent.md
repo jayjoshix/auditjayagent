@@ -105,8 +105,49 @@ grep -n "unstake\|withdraw\|redeem" — reward distribution timing
 
 ---
 
+## Part 6: Advanced ERC4626 Attack Vectors
+
+### `totalAssets()` Donation Desync (Phantom Revenue)
+If `totalAssets()` returns `balanceOf(address(this))` directly, an attacker can donate tokens to the contract. The vault misclassifies donation as yield and charges performance fees on user principal.
+- Does `totalAssets()` use `balanceOf(address(this))` (vulnerable) or an internally tracked accumulator?
+- **Historical match:** `Direct vault deposits incorrectly counted as revenue leading to liquidity drain`
+
+### Deposit vs. Mint Logic Asymmetry
+`deposit(assets)` and `mint(shares)` are mathematical inverses but protocols often add custom logic (fees, slippage, dead-share burns) to one and forget to mirror it in the other.
+- Place `deposit` and `mint` side by side. Any modifier, fee deduction, or state update in one MUST appear in the other symmetrically.
+- **Historical match:** `ERC4626Cloned deposit and mint logic differ on first deposit`
+
+### Unrealized PnL / Pending Yield Desync
+If the vault deploys capital into active strategies (perpetuals, Aave, Uniswap V3), `totalAssets()` must capture *current* floating PnL. If it only updates on `harvest()`:
+- Attackers buy shares at stale discount right before a harvest.
+- Attackers withdraw at a premium before a loss is formalized.
+- Does `totalAssets()` query the active strategy for current floating PnL, or only count realized balances?
+
+### EIP-4626 Non-Compliance in External Vault Integrations
+When integrating external ERC4626 vaults (e.g., Yearn), `withdraw(assets)` may return slightly less due to fees/rounding. If your protocol rigidly requires `balanceAfter - balanceBefore == assetsRequested`, it will revert and permanently lock user funds.
+- Does the protocol enforce exact return amounts from external vaults?
+- Is `maxWithdraw` used safely for vaults that cap withdrawals below the user's share value?
+- **Historical match:** `Yearn/Maker mismatch prevents zcToken redemption and permanently locks funds`
+
+### Yield Aggregator: Rebalance Allowance Drain
+If a rebalance function accepts user-supplied `account` parameter for who pays quote tokens, anyone can drain the funds of an account that has pre-approved the contract.
+- Does `rebalance()` or `rebalanceLite()` allow the caller to specify an arbitrary paying account?
+- **Historical match:** `H-1: PerpDepository.rebalanceLite can drain anyone who approved it`
+
+### Yield Aggregator: TWAP Interval Misconfiguration
+If `getPositionValue` uses an incorrect or too-short TWAP interval to calculate unrealized P&L, the mark price calculation can be manipulated, enabling extraction beyond intended limits.
+- What TWAP window is used in position valuation? Is it validated against a minimum?
+- **Historical match:** `H-5: PerpDepository#getPositionValue uses incorrect TWAP allowing overextraction`
+
+### Unsafe SafeTransferLib (No Code Check)
+Some implementations of `SafeTransferLib` do not check if the token address has code. An attacker can frontrun token deployment and successfully call `withdraw()` from a non-existent token contract.
+- Does `SafeTransferLib` verify `token.code.length > 0` before transfer?
+- **Historical match:** `Insufficient token existence check can be weaponized via frontrun`
+
+---
+
 ## Output Requirements
 
 Apply shared-rules.md Gates A–F to ALL findings before reporting.
 Use CONFIRMED / PROBABLE / HYPOTHESIS format.
-Prioritize: share inflation, rounding direction, reward checkpoint failures, strategy accounting.
+Prioritize: share inflation, rounding direction, reward checkpoint failures, strategy accounting, totalAssets desync, deposit/mint asymmetry.
