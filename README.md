@@ -1,31 +1,35 @@
-# auditjayagent — Smart Contract Security Agent
+# auditjayagent
 
-A parallelized, protocol-type-aware smart contract security audit skill. Built for elite Web3 auditing.
+> AI-powered parallelized smart contract security audit skill. Built for elite Web3 auditing.
 
-Inspired by [pashov/skills](https://github.com/pashov/skills).
+**Supported AI Platforms:**
+[![Claude Code](https://img.shields.io/badge/Claude_Code-F5E6D0?style=for-the-badge&logo=anthropic&logoColor=1a1a1a)](https://claude.ai/download)
+[![Cursor](https://img.shields.io/badge/Cursor-000000?style=for-the-badge&logo=cursor&logoColor=white)](https://cursor.com)
+[![Codex](https://img.shields.io/badge/Codex-000000?style=for-the-badge&logo=data:image/svg%2bxml;base64,PHN2ZyByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTIyLjI4MTkgOS44MjExYTUuOTg0NyA1Ljk4NDcgMCAwIDAtLjUxNTctNC45MTA4IDYuMDQ2MiA2LjA0NjIgMCAwIDAtNi41MDk4LTIuOUE2LjA2NTEgNi4wNjUxIDAgMCAwIDQuOTgwNyA0LjE4MThhNS45ODQ3IDUuOTg0NyAwIDAgMC0zLjk5NzcgMi45IDYuMDQ2MiA2LjA0NjIgMCAwIDAgLjc0MjcgNy4wOTY2IDUuOTggNS45OCAwIDAgMCAuNTExIDQuOTEwNyA2LjA1MSA2LjA1MSAwIDAgMCA2LjUxNDYgMi45MDAxQTUuOTg0NyA1Ljk4NDcgMCAwIDAgMTMuMjU5OSAyNGE2LjA1NTcgNi4wNTU3IDAgMCAwIDUuNzcxOC00LjIwNTggNS45ODk0IDUuOTg5NCAwIDAgMCAzLjk5NzctMi45MDAxIDYuMDU1NyA2LjA1NTcgMCAwIDAtLjc0NzUtNy4wNzI5em0tOS4wMjIgMTIuNjA4MWE0LjQ3NTUgNC40NzU1IDAgMCAxLTIuODc2NC0xLjA0MDhsLjE0MTktLjA4MDQgNC43NzgzLTIuNzU4MmEuNzk0OC43OTQ4IDAgMCAwIC4zOTI3LS42ODEzdi02LjczNjlsMi4wMiAxLjE2ODZhLjA3MS4wNzEgMCAwIDEgLjAzOC4wNTJ2NS41ODI2YTQuNTA0IDQuNTA0IDAgMCAxLTQuNDk0NSA0LjQ5NDR6bS05LjY2MDctNC4xMjU0YTQuNDcwOCA0LjQ3MDggMCAwIDEtLjUzNDYtMy4wMTM3bC4xNDIuMDg1MiA0Ljc4MyAyLjc1ODJhLjc3MTIuNzcxMiAwIDAgMCAuNzgwNiAwbDUuODQyOC0zLjM2ODV2Mi4zMzI0YS4wODA0LjA4MDQgMCAwIDEtLjAzMzIuMDYxNUw5Ljc0IDE5Ljk1MDJhNC40OTkyIDQuNDk5MiAwIDAgMS02LjE0MDgtMS42NDY0ek0yLjM0MDggNy44OTU2YTQuNDg1IDQuNDg1IDAgMCAxIDIuMzY1NS0xLjk3MjhWMTEuNmEuNzY2NC43NjY0IDAgMCAwIC4zODc5LjY3NjVsNS44MTQ0IDMuMzU0My0yLjAyMDEgMS4xNjg1YS4wNzU3LjA3NTcgMCAwIDEtLjA3MSAwbC00LjgzMDMtMi43ODY1QTQuNTA0IDQuNTA0IDAgMCAxIDIuMzQwOCA3Ljg3MnptMTYuNTk2MyAzLjg1NThMMTMuMTAzOCA4LjM2NCAxNS4xMTkyIDcuMmEuMDc1Ny4wNzU3IDAgMCAxIC4wNzEgMGw0LjgzMDMgMi43OTEzYTQuNDk0NCA0LjQ5NDQgMCAwIDEtLjY3NjUgOC4xMDQydi01LjY3NzJhLjc5Ljc5IDAgMCAwLS40MDctLjY2N3ptMi4wMTA3LTMuMDIzMWwtLjE0Mi0uMDg1Mi00Ljc3MzUtMi43ODE4YS43NzU5Ljc3NTkgMCAwIDAtLjc4NTQgMEw5LjQwOSA5LjIyOTdWNi44OTc0YS4wNjYyLjA2NjIgMCAwIDEgLjAyODQtLjA2MTVsNC44MzAzLTIuNzg2NmE0LjQ5OTIgNC40OTkyIDAgMCAxIDYuNjgwMiA0LjY2ek04LjMwNjUgMTIuODYzbC0yLjAyLTEuMTYzOGEuMDgwNC4wODA0IDAgMCAxLS4wMzgtLjA1NjdWNi4wNzQyYTQuNDk5MiA0LjQ5OTIgMCAwIDEgNy4zNzU3LTMuNDUzN2wtLjE0Mi4wODA1TDguNzA0IDUuNDU5YS43OTQ4Ljc5NDggMCAwIDAtLjM5MjcuNjgxM3ptMS4wOTc2LTIuMzY1NGwyLjYwMi0xLjQ5OTggMi42MDY5IDEuNDk5OHYyLjk5OTRsLTIuNTk3NCAxLjQ5OTctMi42MDY3LTEuNDk5N1oiLz48L3N2Zz4=&logoColor=white)](https://openai.com/index/introducing-codex/)
+[![GitHub Copilot](https://img.shields.io/badge/GitHub_Copilot-000000?style=for-the-badge&logo=githubcopilot&logoColor=white)](https://github.com/features/copilot)
+[![Windsurf](https://img.shields.io/badge/Windsurf-0062FF?style=for-the-badge&logo=windsurf&logoColor=white)](https://www.windsurf.com/)
 
 ---
 
-## Usage
+## Install, Run & Update Prompts
 
-### From any AI coding assistant (Claude Code, Codex CLI, Cursor, Windsurf)
-
-**Install and run (public GitHub):**
 ```
-Install https://github.com/jayjoshix/auditjayagent and run audit agent on the codebase
+Install https://github.com/jayjoshix/auditjayagent/ and run audit agent on the codebase
+Install https://github.com/jayjoshix/auditjayagent/ and run audit agent on src/LendingPool.sol --file-output
 ```
 
-**Run locally (already cloned):**
 ```
 run audit agent on the codebase
-run audit agent on src/LendingPool.sol
-run audit agent on src/ --file-output
+run audit agent on *specified files*
 ```
 
-**With file output (saves `audit-report.md` in project root):**
-```
-run audit agent on the codebase --file-output
-```
+---
+
+## Skills
+
+| Skill | Description |
+|---|---|
+| [audit-agent](audit-agent/) | Fast parallel multi-agent security audit with protocol-type routing and gate-validated findings |
 
 ---
 
@@ -42,34 +46,18 @@ The audit agent follows a strict 4-turn orchestration flow:
 
 ### Protocol Auto-Detection
 
-The agent greps for protocol-specific keywords and selects the best 2 matching specialist agents:
-
-| Type | Specialist Agent |
-|---|---|
-| Lending | lending-agent (bad debt, interest ordering, liquidations) |
-| DEX / AMM | dex-agent (oracle, slippage, reentrancy, tick math) |
-| Perpetuals / CLOB | perps-agent (margin extraction, leverage bypass, liquidation deadlocks) |
-| CDP | cdp-agent (stability fees, liquidation insolvency, flash mints) |
-| Bridge | bridge-agent (replay attacks, gas limit, calldata injection) |
-| Vault / ERC4626 | vault-agent (share inflation, rounding, reward checkpoints) |
-| Staking | staking-agent (reward accounting, share inflation, liquid staking) |
-| Options | options-agent (tick math, commission bypass, solvency math) |
-| NFT | nft-agent (reentrancy via callbacks, signature replay, auction) |
-| Oracle | oracle-agent (staleness, TWAP, decimals, read-only reentrancy) |
+The agent greps for protocol-specific keywords and selects the best 2 matching specialist agents. It includes 10 protocol specialists based on 47 specialized auditing skill modules: `lending-agent`, `dex-agent`, `perps-agent`, `cdp-agent`, `bridge-agent`, `vault-agent`, `staking-agent`, `options-agent`, `nft-agent`, and `oracle-agent`.
 
 All audits also run:
 - **Methodology agent** (always) — [HackenProof 10-phase](https://hackenproof.com/blog/for-hackers/smart-contract-audit-methodology-guide) + blind-spots mental models
-- **Generic agent** (always) — Universal checklist (reentrancy, access control, math, signatures)
+- **Generic agent** (always) — Universal checklist (reentrancy, access control, math, signatures, etc.)
 - **Validator agent** (after others) — 14 false positive patterns + Gate A–F re-verification
 
 ---
 
 ## Finding Quality
 
-Every finding is classified as:
-- **CONFIRMED** — All 6 gates passed, full exploit path proven
-- **PROBABLE** — Most gates pass, one piece of evidence missing
-- **HYPOTHESIS** — Pattern spotted but insufficient evidence — includes next validation steps
+Every finding is classified as **CONFIRMED**, **PROBABLE**, or **HYPOTHESIS**.
 
 Gates A–F (from `references/shared-rules.md`):
 - **A**: Value at risk (theft/lock/insolvency — not just a design issue)
@@ -81,58 +69,8 @@ Gates A–F (from `references/shared-rules.md`):
 
 ---
 
-## File Structure
+## Contributing · License
 
-```
-auditjayagent/
-├── CLAUDE.md                          # AI assistant instructions
-├── README.md
-└── audit-agent/
-    ├── SKILL.md                       # Master orchestrator (4-turn flow)
-    ├── VERSION                        # 1.0.0
-    └── references/
-        ├── shared-rules.md            # Gates A-F + 14 FP patterns + output contract
-        ├── report-formatting.md       # Report template
-        ├── judging.md                 # Severity criteria (Critical/High/Medium/Low/Info)
-        └── hacking-agents/
-            ├── methodology-agent.md   # HackenProof phases + blind-spots
-            ├── lending-agent.md       # Lending + debt accounting
-            ├── dex-agent.md           # DEX + Uniswap V3 ticks
-            ├── vault-agent.md         # ERC4626 + yield aggregators
-            ├── cdp-agent.md           # CDP + stablecoins
-            ├── perps-agent.md         # Perpetuals + CLOB
-            ├── bridge-agent.md        # Bridges + cross-chain
-            ├── staking-agent.md       # Staking + liquid staking
-            ├── oracle-agent.md        # Oracle feeds
-            ├── options-agent.md       # Options AMMs
-            ├── nft-agent.md           # NFT marketplaces + lending
-            ├── generic-agent.md       # Universal checklist
-            └── validator-agent.md     # FP filter + gate re-verification
-```
+We welcome improvements and fixes.
 
----
-
-## Skills Coverage
-
-This agent integrates knowledge from 47 specialized auditing skill modules covering:
-- Lending, accounting, Blend V2 specifics
-- DEX, Uniswap V3 ticks, shared debt
-- ERC4626, yield aggregators
-- CDP, CDP-yield strategies
-- Perpetuals, derivatives
-- Bridges, cross-chain
-- Staking pools, liquid staking
-- Oracle protocols
-- Options AMMs, options vaults
-- NFT marketplaces, NFT lending
-- Algorithmic stablecoins, reserve currency
-- Prediction markets, insurance, gaming
-- HackenProof methodology, blind-spots mental models
-- False positive filter (14 real-world FP patterns)
-- Web3 security auditor (Gates A–F)
-
----
-
-## Version
-
-`1.0.0` — See [CHANGELOG](CHANGELOG.md) for updates.
+[MIT](LICENSE) © contributors.
