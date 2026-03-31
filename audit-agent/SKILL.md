@@ -74,7 +74,7 @@ b. Read `{resolved_path}/judging.md`
 Then, in a **single Bash command**, build all bundles using `cat`:
 
 ```bash
-# 0. Build context.md — project documentation to ground the agents and prevent hallucinations
+# 0. Build context.md — project documentation to ground all agents (prevents hallucinated bugs)
 {
   echo "# Protocol Documentation Context"
   for f in {doc_files}; do
@@ -95,41 +95,52 @@ Then, in a **single Bash command**, build all bundles using `cat`:
   done
 } > {bundle_dir}/source.md
 
-# 2. Agent bundles = context.md + source.md + agent-specific instructions + shared-rules
+# ─── ALWAYS-ON CORE AGENTS (run on EVERY audit regardless of protocol type) ───
 
-# Agent 1: Methodology (always runs — [HackenProof methodology](https://hackenproof.com/blog/for-hackers/smart-contract-audit-methodology-guide) + blind-spots mental models)
+# Agent 1 [ALWAYS]: Methodology — HackenProof 10-phase + system architecture mapping
 cat {bundle_dir}/context.md \
     {bundle_dir}/source.md \
     {resolved_path}/hacking-agents/methodology-agent.md \
     {resolved_path}/shared-rules.md \
     > {bundle_dir}/agent-1-bundle.md
 
-# Agent 2: Protocol-specific specialist (selected from Turn 1 detection)
-# Replace {protocol} with: lending | dex | perps | cdp | bridge | vault | staking | options | nft | oracle
+# Agent 2 [ALWAYS]: Blind-Spots — cross-contract integration, valuation mismatches, context dynamics
 cat {bundle_dir}/context.md \
     {bundle_dir}/source.md \
-    {resolved_path}/hacking-agents/{primary_protocol}-agent.md \
+    {resolved_path}/hacking-agents/blindspots-agent.md \
     {resolved_path}/shared-rules.md \
     > {bundle_dir}/agent-2-bundle.md
 
-# Agent 3: Secondary protocol specialist (if 2nd type detected, else repeat primary or use generic)
-cat {bundle_dir}/context.md \
-    {bundle_dir}/source.md \
-    {resolved_path}/hacking-agents/{secondary_protocol}-agent.md \
-    {resolved_path}/shared-rules.md \
-    > {bundle_dir}/agent-3-bundle.md
-
-# Agent 4: Generic security agent (always runs — web3-security-auditor gates)
+# Agent 3 [ALWAYS]: Generic Security — web3-security-auditor gates, broad vulnerability sweep
 cat {bundle_dir}/context.md \
     {bundle_dir}/source.md \
     {resolved_path}/hacking-agents/generic-agent.md \
     {resolved_path}/shared-rules.md \
+    > {bundle_dir}/agent-3-bundle.md
+
+# ─── DYNAMIC SPECIALIST AGENTS (selected by protocol type detection from Turn 1) ───
+
+# Agent 4 [DYNAMIC]: Primary protocol specialist
+# Replace {primary_protocol} with: lending | dex | perps | cdp | bridge | vault | staking | options | nft | oracle
+cat {bundle_dir}/context.md \
+    {bundle_dir}/source.md \
+    {resolved_path}/hacking-agents/{primary_protocol}-agent.md \
+    {resolved_path}/shared-rules.md \
     > {bundle_dir}/agent-4-bundle.md
 
-# Agent 5: Validator agent (dedup + gate pass — runs after others)
-cat {resolved_path}/hacking-agents/validator-agent.md \
+# Agent 5 [DYNAMIC]: Secondary protocol specialist (if 2nd type detected; fallback to generic if only 1 type)
+cat {bundle_dir}/context.md \
+    {bundle_dir}/source.md \
+    {resolved_path}/hacking-agents/{secondary_protocol}-agent.md \
     {resolved_path}/shared-rules.md \
     > {bundle_dir}/agent-5-bundle.md
+
+# ─── POST-PROCESSING (runs AFTER all parallel agents return) ───
+
+# Agent 6 [ALWAYS]: Validator — deduplication, trusted-role discard, gate evaluation, final ranking
+cat {resolved_path}/hacking-agents/validator-agent.md \
+    {resolved_path}/shared-rules.md \
+    > {bundle_dir}/agent-6-bundle.md
 ```
 
 Print line counts for every bundle and `source.md`. Do NOT inline file content into agent prompts.
@@ -138,7 +149,17 @@ Print line counts for every bundle and `source.md`. Do NOT inline file content i
 
 ## Turn 3 — Spawn
 
-In ONE message, spawn Agents 1–4 as **parallel foreground Agent calls**. Use this exact prompt template (substitute real values):
+In ONE message, spawn **Agents 1–5 as parallel foreground Agent calls**. The roster is:
+
+| Agent | Type | Instructions File |
+|---|---|---|
+| Agent 1 | **ALWAYS-ON** | methodology-agent.md |
+| Agent 2 | **ALWAYS-ON** | blindspots-agent.md |
+| Agent 3 | **ALWAYS-ON** | generic-agent.md |
+| Agent 4 | **DYNAMIC** | {primary_protocol}-agent.md |
+| Agent 5 | **DYNAMIC** | {secondary_protocol}-agent.md or generic |
+
+Use this exact prompt template (substitute real values):
 
 ```
 Your bundle file is {bundle_dir}/agent-N-bundle.md ({XXXX} lines).
@@ -164,7 +185,7 @@ attack_path: <numbered steps: pre-state → calls → post-state>
 impact: <who loses, what is stolen/locked/broken>
 ```
 
-Agent 5 (validator) runs AFTER Agents 1–4 return. Do not spawn Agent 5 in parallel with the others.
+Agent 6 (validator) runs AFTER Agents 1–5 return. Do not spawn Agent 6 in parallel with the others.
 
 ---
 
@@ -173,7 +194,7 @@ Agent 5 (validator) runs AFTER Agents 1–4 return. Do not spawn Agent 5 in para
 Single-pass: consume all agent outputs, deduplicate, gate-evaluate, and produce the final report in ONE turn.
 
 **Step 1 — Deduplicate.**
-Parse every FINDING and LEAD from all 4 agents. Apply deduplication in this strict order:
+Parse every FINDING and LEAD from all 5 agents (1 Methodology, 2 Blind-Spots, 3 Generic, 4 Primary Specialist, 5 Secondary Specialist). Apply deduplication in this strict order:
 
 - **Round 1 — Exact match:** Group by `group_key` (`Contract | function | bug-class`). Merge identical group_keys into one. Keep the most complete description.
 - **Round 2 — Same root cause:** Two findings that share the same contract AND the same broken state variable or invariant are the SAME BUG even if they have different function names or slightly different bug_class labels. MERGE them. Example: `LendingPool | borrow | oracle-stale` and `LendingPool | liquidate | oracle-stale` are the same oracle finding if they both break the same price-feed invariant.
