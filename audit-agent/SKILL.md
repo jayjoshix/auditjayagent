@@ -57,6 +57,11 @@ echo "oracle: $(grep -rli 'priceFeed\|AggregatorV3\|latestRoundData\|TWAP\|getPr
 
 Select the **top 1–2 types** by hit count. Use `generic` if all counts are below 3.
 
+f. Locate project documentation — Bash `find` for context to ground agents and reduce hallucinations:
+```bash
+find . -maxdepth 3 -type f \( -iname "readme.md" -o -iname "readme.txt" -o -path "*/docs/*.md" -o -path "*/doc/*.md" \) | sort
+```
+
 ---
 
 ## Turn 2 — Prepare
@@ -69,6 +74,16 @@ b. Read `{resolved_path}/judging.md`
 Then, in a **single Bash command**, build all bundles using `cat`:
 
 ```bash
+# 0. Build context.md — project documentation to ground the agents and prevent hallucinations
+{
+  echo "# Protocol Documentation Context"
+  for f in {doc_files}; do
+    echo "## $f"
+    cat "$f"
+    echo ""
+  done
+} > {bundle_dir}/context.md
+
 # 1. Build source.md — all in-scope .sol files
 {
   for f in {in_scope_files}; do
@@ -80,28 +95,33 @@ Then, in a **single Bash command**, build all bundles using `cat`:
   done
 } > {bundle_dir}/source.md
 
-# 2. Agent bundles = source.md + agent-specific instructions + shared-rules
+# 2. Agent bundles = context.md + source.md + agent-specific instructions + shared-rules
+
 # Agent 1: Methodology (always runs — [HackenProof methodology](https://hackenproof.com/blog/for-hackers/smart-contract-audit-methodology-guide) + blind-spots mental models)
-cat {bundle_dir}/source.md \
+cat {bundle_dir}/context.md \
+    {bundle_dir}/source.md \
     {resolved_path}/hacking-agents/methodology-agent.md \
     {resolved_path}/shared-rules.md \
     > {bundle_dir}/agent-1-bundle.md
 
 # Agent 2: Protocol-specific specialist (selected from Turn 1 detection)
 # Replace {protocol} with: lending | dex | perps | cdp | bridge | vault | staking | options | nft | oracle
-cat {bundle_dir}/source.md \
+cat {bundle_dir}/context.md \
+    {bundle_dir}/source.md \
     {resolved_path}/hacking-agents/{primary_protocol}-agent.md \
     {resolved_path}/shared-rules.md \
     > {bundle_dir}/agent-2-bundle.md
 
 # Agent 3: Secondary protocol specialist (if 2nd type detected, else repeat primary or use generic)
-cat {bundle_dir}/source.md \
+cat {bundle_dir}/context.md \
+    {bundle_dir}/source.md \
     {resolved_path}/hacking-agents/{secondary_protocol}-agent.md \
     {resolved_path}/shared-rules.md \
     > {bundle_dir}/agent-3-bundle.md
 
 # Agent 4: Generic security agent (always runs — web3-security-auditor gates)
-cat {bundle_dir}/source.md \
+cat {bundle_dir}/context.md \
+    {bundle_dir}/source.md \
     {resolved_path}/hacking-agents/generic-agent.md \
     {resolved_path}/shared-rules.md \
     > {bundle_dir}/agent-4-bundle.md
@@ -122,8 +142,8 @@ In ONE message, spawn Agents 1–4 as **parallel foreground Agent calls**. Use t
 
 ```
 Your bundle file is {bundle_dir}/agent-N-bundle.md ({XXXX} lines).
-The bundle contains all in-scope Solidity source code followed by your specialized audit instructions and shared output rules.
-Read the bundle file FULLY before producing any findings.
+The bundle contains the protocol documentation (README/docs) to provide system context, followed by all in-scope Solidity source code, your specialized audit instructions, and shared output rules.
+Read the bundle file FULLY to understand the protocol's intended behavior and mechanics before producing any findings. This prevents hallucinated or out-of-context bugs.
 
 CRITICAL PRE-FILTER — apply BEFORE reporting anything:
 1. TRUSTED ROLE FAST REJECT: If exploiting this bug requires the attacker to hold any of the following roles: `owner`, `admin`, `operator`, `deployer`, `creator`, `guardian`, `keeper`, `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE`, `PAUSER_ROLE`, `UPGRADER_ROLE`, or any role assigned in the constructor or by the deployer — DISCARD the finding entirely. Do NOT report it. These are trusted actors. The ONE exception: if a non-privileged user can OBTAIN that role without authorization.
