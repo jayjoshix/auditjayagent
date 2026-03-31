@@ -11,13 +11,20 @@ You do NOT discover new bugs. You validate, promote, or downgrade existing findi
 
 ## Deduplication Rules
 
-**Group findings by:** `Contract | function | bug_class`
+Apply in this strict order:
 
-For each group:
-1. Select the finding with the most complete exploit path
-2. Annotate `[agents: N]` where N = number of agents that independently flagged it
-3. Merge supporting evidence from other agents into the selected version
-4. Check for composite chains: if FINDING A's output is FINDING B's pre-condition AND combined impact >>> either alone → create a CHAIN finding
+**Round 1 — Exact match.** Group by `Contract | function | bug_class`. Merge exact-match groups into one. Keep the most complete exploit path.
+
+**Round 2 — Same root cause.** Two findings that share the same contract AND the same broken state variable or invariant are THE SAME BUG even if they carry different function names or bug_class labels. MERGE them. Do NOT keep both with "different attack path".
+> Example: `LendingPool | borrow | oracle-stale` + `LendingPool | liquidate | oracle-stale` → ONE finding.
+
+**Round 3 — Same bug, different path.** If two findings describe the same root cause but different attacker steps: KEEP ONLY THE MOST COMPLETE AND DAMAGING ATTACK PATH. Treat the other as a supporting note, not a separate finding.
+
+**Round 4 — Trusted role auto-discard.** IMMEDIATELY DISCARD any finding where the required attacker is: `owner`, `admin`, `operator`, `deployer`, `creator`, `guardian`, `keeper`, `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE`, `PAUSER_ROLE`, `UPGRADER_ROLE`, or any role granted at construction — UNLESS the finding proves a non-privileged address can **obtain** that role without admin approval. Move to rejected log with reason `trusted-role`.
+
+After all rounds: number remaining findings sequentially. Annotate `[agents: N]`.
+
+Check for **composite chains**: if FINDING A's output is FINDING B's pre-condition AND combined impact >>> either alone → create a CHAIN finding.
 
 ---
 
@@ -49,8 +56,11 @@ On SUI, Move-based, Solana: standard ERC-20 direct `transfer()` donation attacks
 **FP-8: Secondary guard blocks exploit**
 After Guard A fails, is there an independent Guard B that still blocks? Common: `checkQuorum`, `membership checks`, `nonce validation`, `access control`. Check ALL guards, not just the first one.
 
-**FP-9: Admin trust scope**
-Is the admin role EXPLICITLY trusted in the audit scope/README? If yes, admin-only exploits are out of scope UNLESS non-admin can ELEVATE to admin.
+**FP-9: Admin / trusted-role finding.** HARD RULE — the following are ALWAYS trusted actors: `owner`, `admin`, `operator`, `deployer`, `creator`, `guardian`, `keeper`, `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE`, `PAUSER_ROLE`, `UPGRADER_ROLE`, and any role set in the constructor or assigned by the deployer.
+
+Before keeping a finding, ask: **"Can a completely unprivileged EOA with zero special roles trigger this?"** If the answer is NO — DISCARD the finding. Move to rejected log as `trusted-role`.
+
+The ONLY valid exception: a finding whose **core claim** is that an unprivileged address can escalate to one of these trusted roles (e.g., `grantRole` is callable by anyone, `initialize` is unprotected). That role-escalation path itself is a valid finding. The downstream admin abuse is NOT a separate finding.
 
 **FP-10: Existing bounds enforcement**
 Is there a `require(x > 0)`, `require(x <= MAX)`, `if (x == 0) revert`, or `saturating_sub` that prevents the reported overflow/underflow? Grep for these before claiming the bug is valid.

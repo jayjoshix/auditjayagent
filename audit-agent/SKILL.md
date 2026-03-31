@@ -124,6 +124,11 @@ In ONE message, spawn Agents 1–4 as **parallel foreground Agent calls**. Use t
 Your bundle file is {bundle_dir}/agent-N-bundle.md ({XXXX} lines).
 The bundle contains all in-scope Solidity source code followed by your specialized audit instructions and shared output rules.
 Read the bundle file FULLY before producing any findings.
+
+CRITICAL PRE-FILTER — apply BEFORE reporting anything:
+1. TRUSTED ROLE FAST REJECT: If exploiting this bug requires the attacker to hold any of the following roles: `owner`, `admin`, `operator`, `deployer`, `creator`, `guardian`, `keeper`, `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE`, `PAUSER_ROLE`, `UPGRADER_ROLE`, or any role assigned in the constructor or by the deployer — DISCARD the finding entirely. Do NOT report it. These are trusted actors. The ONE exception: if a non-privileged user can OBTAIN that role without authorization.
+2. DUPLICATE SCREEN: Before adding a finding, check your own list so far. If you already have a finding for the same contract targeting the same vulnerable state variable or broken invariant — even with a different attack path — do NOT add it again. Merge the evidence instead.
+
 Produce a structured list of findings and leads. For each item output:
 
 FINDING or LEAD
@@ -148,7 +153,14 @@ Agent 5 (validator) runs AFTER Agents 1–4 return. Do not spawn Agent 5 in para
 Single-pass: consume all agent outputs, deduplicate, gate-evaluate, and produce the final report in ONE turn.
 
 **Step 1 — Deduplicate.**
-Parse every FINDING and LEAD from all 4 agents. Group by `group_key` (format: `Contract | function | bug-class`). Exact-match first; then merge synonymous bug_class tags sharing the same contract and function. Keep the best-description version per group. Number sequentially. Annotate `[agents: N]`.
+Parse every FINDING and LEAD from all 4 agents. Apply deduplication in this strict order:
+
+- **Round 1 — Exact match:** Group by `group_key` (`Contract | function | bug-class`). Merge identical group_keys into one. Keep the most complete description.
+- **Round 2 — Same root cause:** Two findings that share the same contract AND the same broken state variable or invariant are the SAME BUG even if they have different function names or slightly different bug_class labels. MERGE them. Example: `LendingPool | borrow | oracle-stale` and `LendingPool | liquidate | oracle-stale` are the same oracle finding if they both break the same price-feed invariant.
+- **Round 3 — Same bug, different attack path:** If two findings describe identical root cause but different attacker steps — KEEP ONLY THE MOST COMPLETE ATTACK PATH. Do NOT list both.
+- **Round 4 — Trusted role auto-discard:** DISCARD any finding where the attacker is `owner`, `admin`, `operator`, `deployer`, `creator`, `guardian`, `keeper`, `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE`, `PAUSER_ROLE`, `UPGRADER_ROLE`, or any role granted at construction — UNLESS the finding explicitly proves a non-privileged user can obtain that role. Move discarded findings to the rejected log with reason "trusted-role".
+
+After deduplication: number remaining findings sequentially. Annotate `[agents: N]`.
 
 Check for **composite chains**: if Finding A's output feeds into Finding B's precondition AND combined impact is strictly worse than either alone, add `Chain: [A] + [B]` at confidence = min(A, B). Most audits have 0–2 chains.
 

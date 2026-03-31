@@ -21,6 +21,8 @@ State clearly:
 - Does the attacker need flash liquidity? MEV? Specific approvals?
 - Are allowlists, roles, or whitelists involved? How does the attacker obtain them?
 
+**TRUSTED ROLE HARD BLOCK:** If the attacker must hold `owner`, `admin`, `operator`, `deployer`, `creator`, `guardian`, `keeper`, `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE`, `PAUSER_ROLE`, `UPGRADER_ROLE`, or any role granted at construction or by the deployer — **Gate B FAILS automatically**. Downgrade to HYPOTHESIS and note `trusted-actor`. The only exception: if you can prove a non-privileged address can ESCALATE to this role without admin approval (e.g., missing access control on a role-grant function).
+
 ### Gate C — Reachability
 Identify ONE of:
 - An attacker-callable `external` or `public` entrypoint, OR
@@ -74,7 +76,7 @@ Before finalizing, check these common FPs:
 
 **FP-8: Secondary guard blocks.** Guard A is broken but Guard B independently blocks the exploit. **Fix:** After bypassing Guard A, trace Guards B and C.
 
-**FP-9: Admin trust scope.** Reporting admin-only functions when admin is explicitly trusted in scope. **Fix:** Check README/scope for trust assumptions.
+**FP-9: Admin / trusted-role finding.** The following are ALWAYS considered trusted: `owner`, `admin`, `operator`, `deployer`, `creator`, `guardian`, `keeper`, `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE`, `PAUSER_ROLE`, `UPGRADER_ROLE`, and any role assigned in the constructor or by the deployer. A finding that **requires** one of these roles to execute MUST be discarded or downgraded to INFO. Ask: "Can a completely unprivileged EOA (no special role, no whitelist) trigger this?" If no — discard. Exception: if you can prove the role-grant function itself is missing access control (e.g., `grantRole` callable by anyone), then the role-escalation path is a valid finding on its own.
 
 **FP-10: Bounds enforcement exists.** Reporting overflow/div-by-zero without checking `require(x > 0)`, `require(x <= MAX)`, or `saturating_sub`. **Fix:** Grep for the bounds check.
 
