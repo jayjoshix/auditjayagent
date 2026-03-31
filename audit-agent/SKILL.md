@@ -40,22 +40,44 @@ c. Bash `mktemp -d /tmp/audit-XXXXXX` → store result as `{bundle_dir}`
 
 d. Read local `VERSION` file from the same directory as this SKILL.md
 
-e. Protocol type detection — run ALL grep commands in one bash call, count hits, select type:
+e. Protocol type detection — run ALL grep commands in one bash call, count hits, select type.
+Each pattern checks **function signatures first** (strong signal) AND general keywords (weak signal):
 ```bash
 echo "=== PROTOCOL DETECTION ===" && \
-echo "lending: $(grep -rli 'borrow\|collateral\|liquidat\|healthFactor\|repay' {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
-echo "dex: $(grep -rli 'swap\|getReserves\|getAmountOut\|sqrtPrice\|tick' {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
-echo "perps: $(grep -rli 'position\|funding\|leverage\|openInterest\|markPrice' {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
-echo "cdp: $(grep -rli 'vault.*mint\|collateralRatio\|debtCeiling\|stabilityFee' {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
-echo "bridge: $(grep -rli 'bridge\|crossChain\|relay\|messageId\|L1\|L2' {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
-echo "vault: $(grep -rli 'ERC4626\|totalAssets\|convertToShares\|pricePerShare\|sharePrice' {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
-echo "staking: $(grep -rli 'stake\|unstake\|epoch\|rewardPerToken\|rewardRate' {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
-echo "options: $(grep -rli 'option\|strike\|premium\|expiry\|settle\|exercise' {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
-echo "nft: $(grep -rli 'ERC721\|tokenId\|NFT\|marketplace\|listing' {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
-echo "oracle: $(grep -rli 'priceFeed\|AggregatorV3\|latestRoundData\|TWAP\|getPrice' {sol_dir} --include='*.sol' 2>/dev/null | wc -l)"
+echo "lending: $(grep -rli \
+  'function borrow\|function repay\|function liquidat\|function getHealthFactor\|function supply\|function withdraw\|healthFactor\|collateralFactor' \
+  {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
+echo "dex: $(grep -rli \
+  'function swap\|function addLiquidity\|function removeLiquidity\|function getAmountOut\|function getReserves\|sqrtPriceX96\|function quote\b' \
+  {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
+echo "perps: $(grep -rli \
+  'function openPosition\|function closePosition\|function liquidatePosition\|function getFundingRate\|function getMarkPrice\|openInterest\|fundingRate' \
+  {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
+echo "cdp: $(grep -rli \
+  'function openVault\|function mintStable\|function closeVault\|collateralRatio\|debtCeiling\|stabilityFee\|function liquidateVault' \
+  {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
+echo "bridge: $(grep -rli \
+  'function bridge\b\|function relay\b\|function sendMessage\|function receiveMessage\|function claimTokens\|crossChainTransfer\|messageId' \
+  {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
+echo "vault: $(grep -rli \
+  'function totalAssets\|function convertToShares\|function convertToAssets\|function previewDeposit\|function previewWithdraw\|ERC4626\|function pricePerShare' \
+  {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
+echo "staking: $(grep -rli \
+  'function stake\b\|function unstake\b\|function claimRewards\|function notifyRewardAmount\|function getReward\|rewardPerToken\|function harvest\b' \
+  {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
+echo "options: $(grep -rli \
+  'function exercise\b\|function settleOption\|function buyOption\|function writeOption\|function createOption\|strikePrice\|function expireOption' \
+  {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
+echo "nft: $(grep -rli \
+  'function listNFT\|function buyNFT\|function createAuction\|function safeMint\|function tokenURI\|ERC721\|function placeBid' \
+  {sol_dir} --include='*.sol' 2>/dev/null | wc -l)" && \
+echo "oracle: $(grep -rli \
+  'function getPrice\b\|function updatePrice\|function getLatestPrice\|latestRoundData\|AggregatorV3Interface\|function getTwap\|function fetchPrice' \
+  {sol_dir} --include='*.sol' 2>/dev/null | wc -l)"
 ```
 
 Select the **top 1–2 types** by hit count. Use `generic` if all counts are below 3.
+> **Tie-break rule:** if two types are within 2 hits of each other, pick both as primary+secondary. Function signatures (`function xxx(`) are strong signals — even 1 file match on a unique function name like `openPosition` is enough to select that specialist.
 
 f. Locate project documentation — Bash `find` for context to ground agents and reduce hallucinations:
 ```bash
