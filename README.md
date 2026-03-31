@@ -1,4 +1,4 @@
-# auditjaygent — Smart Contract Security Agent
+# auditjayagent — Smart Contract Security Agent
 
 A parallelized, protocol-type-aware smart contract security audit skill. Built for elite Web3 auditing.
 
@@ -12,7 +12,7 @@ Inspired by [pashov/skills](https://github.com/pashov/skills).
 
 **Install and run (public GitHub):**
 ```
-Install https://github.com/[your-username]/auditjaygent/ and run audit agent on the codebase
+Install https://github.com/jayjoshix/auditjayagent and run audit agent on the codebase
 ```
 
 **Run locally (already cloned):**
@@ -84,7 +84,7 @@ Gates A–F (from `references/shared-rules.md`):
 ## File Structure
 
 ```
-auditjaygent/
+auditjayagent/
 ├── CLAUDE.md                          # AI assistant instructions
 ├── README.md
 └── audit-agent/
