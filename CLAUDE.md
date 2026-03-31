@@ -10,7 +10,7 @@ A library of smart contract security audit skills. Built for elite-level Solidit
 
 To install and run:
 ```
-Install https://github.com/[your-username]/auditjaygent/ and run audit agent on the codebase
+Install https://github.com/jayjoshix/auditjayagent and run audit agent on the codebase
 ```
 
 Or if already cloned locally:
