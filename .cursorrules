@@ -1,0 +1,21 @@
+# Cursor Rules for auditjayagent
+
+## What This Repo Is
+A library of smart contract security audit skills for elite-level Solidity auditing.
+
+## How to Run the Audit Agent
+The skill entry point is: `audit-agent/SKILL.md`
+
+Trigger keywords: "audit", "run audit agent", "security review", "find bugs", "check for vulnerabilities"
+
+Install command (for target codebases):
+```
+Install https://github.com/jayjoshix/auditjayagent and run audit agent on the codebase
+```
+
+## Output Rules (Hard Constraints)
+- Never fabricate findings — every claim must trace to actual source code
+- Apply Gates A–F from `audit-agent/references/shared-rules.md` to ALL findings
+- Output format: CONFIRMED / PROBABLE / HYPOTHESIS only
+- Auto-discard: findings requiring privileged roles (owner, admin, deployer) with no escalation path
+- Auto-merge: same root cause with different attack paths → keep the most complete path only
