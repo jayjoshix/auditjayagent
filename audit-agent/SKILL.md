@@ -185,12 +185,34 @@ Use this exact prompt template (substitute real values):
 
 ```
 Your bundle file is {bundle_dir}/agent-N-bundle.md ({XXXX} lines).
-The bundle contains the protocol documentation (README/docs) to provide system context, followed by all in-scope Solidity source code, your specialized audit instructions, and shared output rules.
-Read the bundle file FULLY to understand the protocol's intended behavior and mechanics before producing any findings. This prevents hallucinated or out-of-context bugs.
+The bundle contains: (1) protocol documentation/README, (2) all in-scope Solidity source code, (3) your specialized audit instructions, (4) shared output rules.
 
+════════════════════════════════════════════════════
+MANDATORY STEP 0 — UNDERSTAND THE SYSTEM BEFORE READING ANY FUNCTION
+(Do this BEFORE hunting for bugs. A finding is only valid if it's grounded in the system's actual mechanics.)
+════════════════════════════════════════════════════
+
+Read the documentation and source code to answer ALL of these questions first:
+
+SYSTEM MAP (answer in 1-3 sentences each before proceeding):
+1. PURPOSE       — What does this protocol do? What problem does it solve for users?
+2. ACTORS        — Who are the participants? (users, admins, liquidators, keepers, external protocols)
+3. MONEY FLOW    — Where does value enter, transform, and exit? What are the intermediate representations? (shares, debt tokens, LP tokens, wrapped assets)
+4. TRUST GRAPH   — Which contracts call which? Which trust which? Which are upgradeable or replaceable?
+5. INVARIANTS    — What must ALWAYS be true? (e.g., totalDebt == sum(userDebts), utilization <= 100%, sum(shares) <= totalSupply)
+6. STATE MACHINE — What are the valid states? What transitions are allowed? What guards enforce transitions?
+7. ORACLE PIPELINE — How does price data flow from source → adapter → consumer? What are the fallback paths?
+8. EXTERNAL DEPS — Which external protocols are integrated? (Uniswap, Chainlink, Aave, etc.) What does this protocol ASSUME about their behavior?
+
+Only AFTER completing the system map above should you begin bug hunting.
+A finding that contradicts your system map (e.g., claims a function does something it clearly doesn't) is a hallucination — discard it.
+
+════════════════════════════════════════════════════
 CRITICAL PRE-FILTER — apply BEFORE reporting anything:
+════════════════════════════════════════════════════
 1. TRUSTED ROLE FAST REJECT: If exploiting this bug requires the attacker to hold any of the following roles: `owner`, `admin`, `operator`, `deployer`, `creator`, `guardian`, `keeper`, `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE`, `PAUSER_ROLE`, `UPGRADER_ROLE`, or any role assigned in the constructor or by the deployer — DISCARD the finding entirely. Do NOT report it. These are trusted actors. The ONE exception: if a non-privileged user can OBTAIN that role without authorization.
 2. DUPLICATE SCREEN: Before adding a finding, check your own list so far. If you already have a finding for the same contract targeting the same vulnerable state variable or broken invariant — even with a different attack path — do NOT add it again. Merge the evidence instead.
+3. SYSTEM-MAP CROSS-CHECK: Before finalizing any finding, verify it against your system map from Step 0. Does the attack path actually work given the roles, state machine, and trust graph you mapped? If not — DISCARD.
 
 Produce a structured list of findings and leads. For each item output:
 
@@ -206,6 +228,7 @@ description: <2-4 sentences explaining the vulnerability>
 attack_path: <numbered steps: pre-state → calls → post-state>
 impact: <who loses, what is stolen/locked/broken>
 ```
+
 
 Agent 6 (validator) runs AFTER Agents 1–5 return. Do not spawn Agent 6 in parallel with the others.
 
