@@ -80,6 +80,13 @@ Before finalizing, check these common FPs:
 
 **FP-10: Bounds enforcement exists.** Reporting overflow/div-by-zero without checking `require(x > 0)`, `require(x <= MAX)`, or `saturating_sub`. **Fix:** Grep for the bounds check.
 
+**FP-11: Transient storage claimed poisoned without cross-frame proof.** Reporting `tstore`/`tload` as exploitable without showing that the slot is overwritten BEFORE the relevant callback completes and is NOT cleared between calls. **Fix:** Trace the exact `tstore` → callback → `tload` path and confirm the window exists.
+
+**FP-12: Batch flag reset misread.** Claiming a solvency check is skipped in batch/multicall without showing the exact ordering where a flag is reset BETWEEN the write and the check. **Fix:** Enumerate every execution path through the batch loop.
+
+**FP-13: Internal oracle feedback assumed flash-manipulable without same-tx proof.** Reporting that price depends on internal state (balance ratio, AMM reserves) without proving the manipulation and the exploitation happen in the SAME transaction. **Fix:** Trace the full flash loan atomicity — is there a commit/settlement step between manipulation and extraction?
+
+
 ---
 
 ## Output Contract

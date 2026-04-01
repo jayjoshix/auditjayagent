@@ -85,6 +85,34 @@ Apply EVERY item below to the codebase. Do NOT skip any.
 
 ---
 
+## Part 2: Exploit-Chain Pattern Checklist (web3-security-auditor)
+
+These patterns are "if-and-only-if" signals. Each STILL requires Gates A–F. Do not report unless every gate passes.
+
+### A) External Calls / Privilege Boundaries
+- **Arbitrary call / call injection**: User controls target/calldata in a value or approval context. Prove a spend primitive exists (approve → transferFrom, ETH send, etc.)
+- **Trusted caller confusion (router/callback injection)**: A whitelisted caller (router, bridge) triggers attacker-controlled downstream effects via user-supplied calldata parameters.
+- **Meta-tx/forwarder spoofing**: Signature doesn't bind all of (from, to, calldata, chainId, nonce) — check for missing fields in the hash.
+- **Reentrancy/mid-state abuse**: External call occurs before effects; show reentry into a sensitive path that observes inconsistent state (not just a repeat call — show the state inconsistency).
+- **User-supplied token/market**: Approvals/transfers execute against an attacker-chosen address without a registry or allowlist check.
+- **Inherited public entrypoints left exposed**: A "safe override" exists but another parent entrypoint bypasses the check entirely (e.g., OpenZeppelin `_transfer` override but `transferFrom` not overridden).
+- **Auth boolean bugs**: Prove the truth-table of the auth check makes it trivially pass (e.g., `if (!hasRole || isPublic)` where attacker can set `isPublic`).
+- **Batch flag reset**: Show that operation ordering within a batch or multi-call skips solvency/invariant checks because a flag is reset mid-sequence.
+
+### B) Oracle / Manipulation
+- **Spot reserve used for enforcement**: Spot price is used in LTV, limits, or solvency — AND it's flash-manipulable — AND there's no TWAP or Chainlink fallback.
+- **Stale report replay**: No freshness check + monotonic round/epoch allows replaying an old favorable price. Prove the profit path.
+- **Internal oracle feedback loop**: Price depends on manipulable internal state (e.g., balance ratio) and gates value extraction — attackable within one transaction.
+- **Token hooks / sync distortion**: An ERC-777 hook or a `sync()` call changes AMM balances before enforcement reads them, enabling sandwich.
+
+### C) Accounting / Math
+- **First deposit / donation manipulation**: Near-empty share ratio manipulated via direct donation, then leveraged downstream to extract more than deposited.
+- **Credits using input amount not received amount**: Accounting credits the `amount` parameter instead of the balance delta. Prove over-credit by showing `received < amount` path (fee-on-transfer, slippage, partial fill).
+- **Rounding harvest loops**: Repeated operations accumulate attacker-favorable rounding dust into extractable value. Prove the loop count that makes it economically worthwhile.
+- **Transient storage slot poisoning (EIP-1153)**: `tstore`/`tload` used for auth or routing; overwritten before a callback completes, or not cleared between calls in same tx — auth state leaks across frames.
+
+---
+
 ## Output Requirements
 
 Apply shared-rules.md Gates A–F to ALL findings before reporting.

@@ -170,8 +170,57 @@ If redemption math redistributes collateral without excluding negative-equity ba
 
 ---
 
+## Part 5: Verified Exploit Templates — Shared-Debt Lending (case-studies.md)
+
+Use these as attack path templates for Gate E and disproof checklists for Gate F. Only report if the target repo reproduces the same reachable conditions.
+
+### CS-10: Unbacked Borrow via Debt-Share Ratio Inflation (Monolith Pattern)
+Root cause: Multi-step rounding + epoch debase inflates `totalFreeDebtShares/freeDebt` ratio. When `totalFreeDebt == 0` with huge `totalFreeDebtShares`, new borrows mint shares 1:1 — those shares are later valued at far less actual debt.
+Attack path:
+1. Borrow + redeem all but 1 wei repeatedly until share ratio inflates past debase threshold.
+2. Split dust debt across multiple accounts to survive per-user rounding.
+3. Repay one account to set `totalFreeDebt = 0` while `totalFreeDebtShares` remains huge.
+4. New borrow on another account mints shares 1:1. Convert to effectively unbacked tokens.
+Disproof: Prevent `totalFreeDebt==0` with nonzero shares; consistent rounding; share↔asset invariant checks.
+
+### CS-11: Epoch Debase → Borrower Share Rounds to 0 → Cached Collateral Exceeds Actual
+Root cause: Epoch increment divides shares by 1e18. Borrowers with <1e18 shares round to zero. `_cachedCollateralBalances` update loop early-exits, leaving cached value higher than actual backing.
+Attack path:
+1. Ensure borrower's free debt shares < 1e18.
+2. Trigger redeems that increment epoch and debase shares.
+3. Borrower shares round to 0 → loop ends early → cached collateral remains inflated.
+4. Convert remaining cached collateral to non-redeemable and withdraw.
+Disproof: Per-borrower shares sum invariant across epoch transitions; no lossy division without remainder tracking.
+
+### CS-12: Free-Debt DoS via Share-Rate Inflation → mulDiv Overflow
+Root cause: Repeated `borrow(minDebt)` + `redeem(all but 1 wei)` inflates `totalFreeDebtShares/totalFreeDebt`. Later borrows attempt `shares = amount.mulDivUp(totalFreeDebtShares, totalFreeDebt)` → overflow and revert.
+Attack path: If other users have free debt, redeem to reduce them. Loop: borrow minDebt, redeem all but 1 wei. Repeat until ratio huge. New borrows brick → protocol liveness failure.
+Disproof: Cap share-rate; use 512-bit mulDiv; debase logic keeps ratios bounded; disallow permanent 1-wei state.
+
+### CS-13: Bad Debt Breaks Redemption Accounting — Over-Distribution
+Root cause: `redeem` repays free debtors then distributes collateral proportional to shares. With bad-debt position, accounting "pulls" more collateral from some accounts than exists.
+Attack path: Create bad-debt account among free debt borrowers. Trigger large redemption. Accounting over-allocates collateral per shares, leaving remaining users unable to withdraw.
+Disproof: Bound per-borrower collateral extraction; isolate bad debt handling from redemption; require writeOff before redeem if bad debt exists.
+
+### CS-14: writeOff Abuse Loop — Cyclic Collateral Extraction
+Root cause: `writeOff` socializes debt to remaining borrowers, transfers written-off borrower's collateral to recipient. If written-off borrower is the ONLY participant, attacker creates tiny "sink" account and cyclically extracts collateral.
+Attack path:
+1. Ensure attacker-controlled borrower A is in bad debt and alone in bucket.
+2. Open borrower B with small collateral.
+3. `writeOff(A, recipient=attacker)` → A's collateral sent to attacker, A's debt socialized onto B.
+4. Write off B. Repeat indefinitely.
+Disproof: Disallow writeOff when collateral > 0 without strict conditions; prevent attacker-chosen recipient; require liquidation/auction.
+
+### CS-15: Inconsistent Health Checks — adjust() vs liquidate() Mismatch
+Root cause: `adjust()` allows `borrowingPower >= debt` (≥), but `liquidate()` requires `borrowingPower > debt` (>). User at boundary `borrowingPower == debt` passes adjust post-check, but is liquidatable.
+Attack path: User adjusts to boundary where `borrowingPower == debt`. System considers position healthy. Third party triggers liquidation using stricter inequality → wrongful liquidation.
+Disproof: Use identical health predicate across all code paths; define boundary behavior (==) consistently.
+
+---
+
 ## Output Requirements
 
 Apply shared-rules.md Gates A–F to ALL findings before reporting.
 Use CONFIRMED / PROBABLE / HYPOTHESIS format.
-Prioritize: bad debt socialization, interest ordering bugs, liquidation DoS, flash-loan health bypass, reserve desync, utilization bypass.
+Prioritize: bad debt socialization, interest ordering bugs, liquidation DoS, flash-loan health bypass, reserve desync, utilization bypass, share-ratio inflation, epoch debase invariant breaks.
+
