@@ -11,7 +11,7 @@ Supports Claude Code, OpenAI Codex CLI, Cursor, and Windsurf.
 
 To install and run from a target codebase:
 ```
-Install https://github.com/jayjoshix/auditjayagent and run audit agent on the codebase
+Install https://github.com/jayjoshix/audit-skills and run audit agent on the codebase
 ```
 
 If already cloned and the `audit-agent/` folder is present:

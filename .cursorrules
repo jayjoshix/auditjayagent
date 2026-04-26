@@ -10,7 +10,7 @@ Trigger keywords: "audit", "run audit agent", "security review", "find bugs", "c
 
 Install command (for target codebases):
 ```
-Install https://github.com/jayjoshix/auditjayagent and run audit agent on the codebase
+Install https://github.com/jayjoshix/audit-skills and run audit agent on the codebase
 ```
 
 ## Output Rules (Hard Constraints)
