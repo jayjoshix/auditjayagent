@@ -1,6 +1,6 @@
 # audit-skills
 
-> AI-powered Solidity security skills — inspired by [Pashov Audit Group](https://www.pashov.com/).
+> AI-powered Solidity security skills — inspired by [Pashov Audit Group's skills repository](https://github.com/pashov/skills).
 > A comprehensive, multi-agent AI security auditing framework for smart contracts. Built specifically for elite-level Web3 auditing on Claude Code, OpenAI Codex CLI, Cursor, and Windsurf.
 
 **Supported AI Platforms:**
